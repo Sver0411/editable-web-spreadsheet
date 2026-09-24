@@ -1,0 +1,1381 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>研究室记录表</title>
+<style>
+/* =====================================================================
+   1. Tokens
+   ===================================================================== */
+:root{
+  --bg:#ffffff;
+  --bg-subtle:#fafafb;
+  --bg-head:#f7f7f8;
+  --bg-hover:#fbfbfc;
+  --bg-sel:#eef6f4;
+  --line:#e3e5e8;
+  --line-soft:#eef0f2;
+  --text:#2b2e34;
+  --text-dim:#697077;
+  --muted:#9ba1a9;
+  --accent:#2f9a86;
+  --accent-deep:#22796a;
+  --accent-soft:#e7f3f0;
+  --radius:7px;
+  --rowh:34px;
+  --shadow-menu:0 10px 26px rgba(18,22,28,.10), 0 1px 2px rgba(18,22,28,.06);
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+
+/* =====================================================================
+   2. Reset / layout
+   ===================================================================== */
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;background:var(--bg);color:var(--text);
+  font:13px/1.45 -apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+button,input,textarea{font:inherit;color:inherit}
+.app{display:flex;flex-direction:column;height:100%;min-height:0}
+
+/* =====================================================================
+   3. Toolbar
+   ===================================================================== */
+.toolbar{
+  flex:0 0 auto;display:flex;align-items:center;gap:12px;
+  padding:9px 14px;border-bottom:1px solid var(--line);background:#fff;
+  position:relative;z-index:20;
+}
+.title{
+  margin:0;font-size:14px;font-weight:600;letter-spacing:.2px;white-space:nowrap;
+}
+.title .sub{
+  font-weight:400;font-size:12px;color:var(--muted);margin-left:8px;
+}
+.spacer{flex:1 1 auto}
+
+/* save indicator */
+.save{
+  font-size:12px;color:var(--muted);min-width:56px;text-align:right;
+  transition:color .2s ease;
+}
+.save[data-state="saving"]{color:#b09a6a}
+.save[data-state="saved"]{color:#8ba79c}
+
+/* buttons */
+.btn{
+  appearance:none;height:28px;padding:0 11px;border:1px solid var(--line);
+  background:#fff;border-radius:6px;font-size:12.5px;color:var(--text);
+  display:inline-flex;align-items:center;gap:5px;cursor:default;white-space:nowrap;
+  transition:background .14s ease,border-color .14s ease,color .14s ease;
+}
+.btn:hover{background:#fafbfc;border-color:#d9dce0}
+.btn:active{background:#f3f4f6}
+.btn .plus{font-size:13px;line-height:1;color:var(--accent)}
+.btn.icon{padding:0 9px;font-size:14px;letter-spacing:.5px;color:var(--text-dim)}
+.btn.icon[aria-expanded="true"]{background:#f4f5f6;border-color:#d9dce0;color:var(--text)}
+.btn[disabled]{color:var(--muted);background:#fcfcfd}
+
+/* segmented filters */
+.seg{
+  display:inline-flex;align-items:center;gap:2px;padding:2px;
+  background:#f4f5f6;border:1px solid var(--line);border-radius:8px;
+}
+.seg button{
+  appearance:none;border:0;background:transparent;color:var(--text-dim);
+  height:24px;padding:0 10px;border-radius:6px;font-size:12.5px;cursor:default;
+  transition:background .14s ease,color .14s ease,box-shadow .14s ease;
+}
+.seg button:hover{color:var(--text);background:rgba(255,255,255,.72)}
+.seg button[aria-pressed="true"]{
+  background:#fff;color:var(--accent-deep);box-shadow:0 1px 2px rgba(18,22,28,.07);
+}
+.seg button[disabled]{color:#c3c7cc;background:transparent;box-shadow:none}
+
+/* dropdown menu */
+.menu{
+  position:fixed;z-index:60;min-width:200px;display:none;padding:5px;
+  background:#fff;border:1px solid var(--line);border-radius:9px;
+  box-shadow:var(--shadow-menu);
+}
+.menu[data-open="true"]{display:block;animation:menuIn .15s cubic-bezier(.2,.7,.3,1)}
+@keyframes menuIn{from{opacity:0;transform:translateY(-4px) scale(.97)}to{opacity:1;transform:none}}
+.menu button{
+  display:flex;align-items:center;justify-content:space-between;gap:20px;
+  width:100%;padding:7px 9px;border:0;border-radius:6px;background:transparent;
+  font-size:12.5px;text-align:left;cursor:default;
+}
+.menu button:hover{background:#f5f6f7}
+.menu button[disabled]{color:var(--muted);background:transparent}
+.menu .key{font-size:11.5px;color:var(--muted);font-family:var(--mono)}
+.menu hr{border:0;border-top:1px solid var(--line-soft);margin:5px 4px}
+/* =====================================================================
+   4. Grid
+   ===================================================================== */
+.grid-wrap{
+  flex:1 1 auto;min-height:0;overflow:auto;position:relative;background:var(--bg);
+}
+table{
+  border-collapse:separate;border-spacing:0;table-layout:fixed;
+  width:max-content;min-width:100%;
+}
+col.rn{width:46px}
+thead th{
+  position:sticky;top:0;z-index:3;height:32px;padding:0;margin:0;
+  background:var(--bg-head);border-right:1px solid var(--line-soft);
+  border-bottom:1px solid var(--line);
+  font-size:12.5px;font-weight:500;color:var(--text-dim);text-align:left;
+  user-select:none;
+}
+thead th .th{
+  position:relative;display:flex;align-items:center;height:32px;
+  padding:0 12px 0 10px;overflow:hidden;white-space:nowrap;
+}
+thead th .name{overflow:hidden;text-overflow:ellipsis}
+thead th.renaming .th{padding-left:6px;padding-right:6px}
+th.rn{
+  left:0;z-index:5;width:46px;text-align:center;color:var(--muted);
+  font-weight:400;border-right:1px solid var(--line);
+}
+th.col-sel{background:#ecf3f1;color:var(--accent-deep)}
+th.col-sel .col-resize::after{background:#cfd4d8}
+
+.col-resize{
+  position:absolute;top:0;right:-3px;width:8px;height:100%;
+  cursor:col-resize;z-index:4;
+}
+.col-resize::after{
+  content:"";position:absolute;top:6px;bottom:6px;left:3px;width:1px;
+  background:transparent;transition:background .14s ease;
+}
+th:hover .col-resize::after{background:#cfd4d8}
+.col-resize.is-dragging::after{background:var(--accent)}
+body.is-resizing{cursor:col-resize;user-select:none}
+
+tbody td{
+  position:relative;vertical-align:top;padding:0;background:#fff;
+  border-right:1px solid var(--line-soft);border-bottom:1px solid var(--line-soft);
+  transition:background .16s ease;
+}
+td.rn{
+  position:sticky;left:0;z-index:2;width:46px;text-align:center;
+  background:var(--bg-subtle);color:var(--muted);font-size:11.5px;
+  padding:8px 0;user-select:none;border-right:1px solid var(--line);
+}
+tbody tr:hover td{background:var(--bg-hover)}
+tbody tr:hover td.rn{background:#f4f5f6}
+
+/* selection */
+td.in-range{background:var(--bg-sel)}
+td.is-active{background:#eaf5f2;box-shadow:inset 0 0 0 1.5px rgba(47,154,134,.8);z-index:1}
+td.rn.is-active{background:#e6efec;color:var(--accent-deep);box-shadow:inset 0 0 0 1.5px rgba(47,154,134,.8)}
+tr.row-sel td{background:#f2f7f5}
+tr.row-sel td.rn{background:#e6efec;color:var(--accent-deep)}
+
+/* cell content */
+.cell{
+  padding:7px 10px;min-height:var(--rowh);
+  white-space:pre-wrap;word-break:break-word;line-height:1.45;
+}
+.cell.is-clamped{max-height:64px;overflow:hidden}
+.cell.status-cell{padding:5px 8px}
+a.link{
+  color:var(--accent-deep);text-decoration:none;
+  border-bottom:1px solid rgba(47,154,134,.3);word-break:break-all;
+}
+a.link:hover{border-bottom-color:rgba(47,154,134,.75)}
+.mail{color:#3d6e8c;border-bottom:1px dotted rgba(61,110,140,.4)}
+
+/* status pill */
+.status{
+  display:inline-flex;align-items:center;gap:6px;padding:2px 9px;
+  border:1px solid #e7e9eb;border-radius:999px;background:#f3f4f5;
+  font-size:12px;color:#767c84;white-space:nowrap;cursor:default;
+  transition:background .16s ease,color .16s ease,border-color .16s ease;
+}
+.status::before{
+  content:"";width:5px;height:5px;border-radius:50%;
+  background:currentColor;opacity:.5;
+}
+.status[data-state="on"]{background:#e9f3f0;border-color:#d7eae4;color:#2c7d6d}
+.status[data-state="reply-on"]{background:#e9f2ec;border-color:#d8e8dd;color:#2f7a52}
+
+/* inline editor */
+td.editing{background:#fff;box-shadow:inset 0 0 0 1.5px rgba(47,154,134,.9);z-index:2}
+.cell-editor{
+  display:block;width:100%;min-height:var(--rowh);margin:0;
+  padding:7px 10px;border:0;outline:none;resize:none;overflow:hidden;
+  background:#fff;line-height:1.45;white-space:pre-wrap;word-break:break-word;
+}
+td.rn .cell-editor{padding:7px 2px;text-align:center}
+
+/* empty state */
+.empty{padding:38px 16px;text-align:center;color:var(--muted);font-size:12.5px}
+.empty .btn{margin-left:2px;vertical-align:middle}
+
+/* column rename input */
+.col-rename{
+  width:100%;height:24px;padding:0 6px;border:1px solid var(--accent);
+  border-radius:5px;background:#fff;outline:none;
+}
+
+/* =====================================================================
+   5. Motion
+   ===================================================================== */
+@keyframes rowIn{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:none}}
+@keyframes rowOut{to{opacity:0;transform:translateY(3px)}}
+@keyframes rowsFade{from{opacity:0}to{opacity:1}}
+tr.row-enter td{animation:rowIn .19s cubic-bezier(.2,.7,.3,1)}
+tr.row-leave td{animation:rowOut .15s ease-in forwards}
+tbody.rows-fade tr{animation:rowsFade .17s ease-out}
+
+/* =====================================================================
+   6. Misc
+   ===================================================================== */
+::-webkit-scrollbar{width:11px;height:11px}
+::-webkit-scrollbar-track{background:#fff}
+::-webkit-scrollbar-thumb{
+  background:#d9dce0;border:2px solid #fff;border-radius:6px;background-clip:content-box;
+}
+::-webkit-scrollbar-thumb:hover{background:#c8ccd2;border:2px solid #fff;background-clip:content-box}
+::selection{background:#dcece8}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{
+    animation-duration:.001ms !important;animation-iteration-count:1 !important;
+    transition-duration:.001ms !important;
+  }
+}
+@media (max-width:760px){
+  .title .sub{display:none}
+  .toolbar{gap:8px;padding:8px 10px}
+  .seg button{padding:0 8px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="toolbar">
+    <h1 class="title">研究室记录表<span class="sub" id="subCount"></span></h1>
+    <div class="seg" id="filters" role="group" aria-label="筛选"></div>
+    <div class="spacer"></div>
+    <span class="save" id="saveState" data-state="saved">已保存</span>
+    <button class="btn" id="addRowBtn"><span class="plus">＋</span>新增行</button>
+    <button class="btn icon" id="moreBtn" aria-haspopup="true" aria-expanded="false" title="更多操作">···</button>
+  </header>
+  <div class="grid-wrap" id="gridWrap">
+    <table id="grid">
+      <colgroup id="cols"></colgroup>
+      <thead id="thead"></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+</div>
+<div class="menu" id="menu" role="menu" data-open="false"></div>
+<!--EMBED-->
+<script>
+/* =====================================================================
+ * 研究室记录表 —— 单文件 · 本地 · 免安装
+ * 结构: Constants / State / Storage / History / Rendering / Cell editing
+ *       Row & Column / Filters / Clipboard / Export / Shortcuts / Events / Init
+ * ===================================================================== */
+'use strict';
+
+/* =============================== Constants =============================== */
+var PRISTINE_HTML = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+var EMBED_ID = 'embedded-data';
+var EMBED_MARKER = '<' + '!--EMBED-->';
+var STORAGE_PREFIX = 'lab-records:v2:';
+var HISTORY_LIMIT = 60;
+var SAVE_DELAY = 380;
+var MIN_COL_W = 56;
+var MAX_EDITOR_H = 320;
+var MENU_ANIM_MS = 150;
+var URL_RE = /^https?:\/\/[^\s]+$/i;
+var MAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+var DATE_RE = /日期|时间|date/i;
+var CONTACT_STATES = ['未联系', '已联系'];
+var REPLY_STATES = ['未回复', '已回复'];
+var DEFAULT_COLUMNS = [
+  { name: '学校',         width: 150 },
+  { name: '研究室名称',   width: 220 },
+  { name: '研究室网址',   width: 270 },
+  { name: '教授名称',     width: 130 },
+  { name: '研究内容',     width: 340 },
+  { name: '是否联系教授', width: 112 },
+  { name: '是否回复',     width: 104 },
+  { name: '联系日期',     width: 118 },
+  { name: '备注',         width: 290 }
+];
+var FILTERS = [
+  { id: 'all',           label: '全部',   role: null },
+  { id: 'contacted',     label: '已联系', role: 'contact' },
+  { id: 'not-contacted', label: '未联系', role: 'contact' },
+  { id: 'replied',       label: '已回复', role: 'reply' },
+  { id: 'not-replied',   label: '未回复', role: 'reply' }
+];
+var SAMPLE_DATA = [
+  {
+    '学校': '筑波大学',
+    '研究室名称': 'Human-Centered Interaction Lab',
+    '研究室网址': 'https://example.ac.jp/hci/',
+    '教授名称': '佐藤教授',
+    '研究内容': 'Human-Computer Interaction / 人与 AI 协作界面',
+    '是否联系教授': '未联系',
+    '是否回复': '未回复',
+    '联系日期': '',
+    '备注': '示例数据，可在「···」菜单中一键清空'
+  },
+  {
+    '学校': '静冈大学',
+    '研究室名称': 'Robotics and Perception Group',
+    '研究室网址': '',
+    '教授名称': '铃木教授',
+    '研究内容': '移动机器人感知与 SLAM',
+    '是否联系教授': '已联系',
+    '是否回复': '已回复',
+    '联系日期': '2026-09-02',
+    '备注': '已约线上面谈'
+  }
+];
+
+/* ================================= State ================================= */
+var state = { id: 'main', columns: [], rows: [], filter: 'all' };
+var ui = {
+  mode: 'cell',                 // cell | row | col
+  anchor: { r: 0, c: 0 },
+  focus: { r: 0, c: 0 },
+  row: -1,
+  col: -1,
+  visible: [],
+  editing: null,
+  drag: null,
+  resizing: null,
+  enterId: null
+};
+var undoStack = [];
+var redoStack = [];
+var saveTimer = null;
+var menuAnimTimer = null;
+var dirty = false;
+
+var $ = function (id) { return document.getElementById(id); };
+var dom = {
+  wrap: $('gridWrap'), grid: $('grid'), cols: $('cols'), thead: $('thead'),
+  tbody: $('tbody'), filters: $('filters'), menu: $('menu'),
+  save: $('saveState'), addRow: $('addRowBtn'), more: $('moreBtn'), count: $('subCount')
+};
+
+/* ================================ Helpers ================================ */
+function uid(p) {
+  return p + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function (m) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m];
+  });
+}
+function clone(o) { return JSON.parse(JSON.stringify(o)); }
+function pad2(n) { return n < 10 ? '0' + n : '' + n; }
+function stamp() {
+  var d = new Date();
+  return d.getFullYear() + pad2(d.getMonth() + 1) + pad2(d.getDate()) +
+    '_' + pad2(d.getHours()) + pad2(d.getMinutes());
+}
+function download(text, filename, mime) {
+  var blob = new Blob([text], { type: mime });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url; a.download = filename;
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(function () {
+    if (URL.revokeObjectURL) URL.revokeObjectURL(url);
+    a.remove();
+  }, 800);
+}
+function isMac() { return /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent); }
+function modKey(e) { return isMac() ? e.metaKey : e.ctrlKey; }
+function isOn(value, states) { return String(value == null ? '' : value).trim() === states[1]; }
+
+/* ================================ Storage ================================ */
+function storageKey() { return STORAGE_PREFIX + (state.id || 'main'); }
+function loadStored() {
+  try {
+    var raw = localStorage.getItem(storageKey());
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) { return null; }
+}
+function setSaveState(s) {
+  if (!dom.save) return;
+  dom.save.dataset.state = s;
+  dom.save.textContent = s === 'saving' ? '保存中…' : (s === 'error' ? '未保存' : '已保存');
+}
+function scheduleSave() {
+  dirty = true;
+  setSaveState('saving');
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveNow, SAVE_DELAY);
+}
+function saveNow() {
+  clearTimeout(saveTimer);
+  try {
+    localStorage.setItem(storageKey(), JSON.stringify({
+      version: 2, id: state.id, columns: state.columns, rows: state.rows,
+      filter: state.filter, savedAt: Date.now()
+    }));
+    dirty = false;
+    setSaveState('saved');
+  } catch (e) {
+    setSaveState('error');
+  }
+}
+function readEmbedded() {
+  var node = document.getElementById(EMBED_ID);
+  if (!node) return null;
+  try { return JSON.parse(node.textContent); } catch (e) { return null; }
+}
+/* ================================ History ================================ */
+function snapshot() { return { columns: clone(state.columns), rows: clone(state.rows) }; }
+function pushHistory() {
+  undoStack.push(snapshot());
+  if (undoStack.length > HISTORY_LIMIT) undoStack.shift();
+  redoStack.length = 0;
+}
+function undo() {
+  if (!undoStack.length) return;
+  redoStack.push(snapshot());
+  applySnapshot(undoStack.pop());
+}
+function redo() {
+  if (!redoStack.length) return;
+  undoStack.push(snapshot());
+  applySnapshot(redoStack.pop());
+}
+function applySnapshot(s) {
+  state.columns = s.columns;
+  state.rows = s.rows;
+  ui.mode = 'cell';
+  ui.row = -1;
+  ui.col = -1;
+  ui.enterId = null;
+  clampSelection();
+  render();
+  scheduleSave();
+}
+function clampSelection() {
+  var rows = ui.visible.length, cols = state.columns.length;
+  ui.focus.r = Math.max(0, Math.min(Math.max(0, rows - 1), ui.focus.r));
+  ui.focus.c = Math.max(0, Math.min(Math.max(0, cols - 1), ui.focus.c));
+  ui.anchor.r = Math.max(0, Math.min(Math.max(0, rows - 1), ui.anchor.r));
+  ui.anchor.c = Math.max(0, Math.min(Math.max(0, cols - 1), ui.anchor.c));
+}
+
+/* =============================== Rendering =============================== */
+function colRole(col) {
+  var n = col.name || '';
+  if (/回复/.test(n) && !DATE_RE.test(n)) return 'reply';
+  if (/联系|contact/i.test(n) && !DATE_RE.test(n) && !/邮箱|mail|e-?mail/i.test(n)) return 'contact';
+  return 'plain';
+}
+function findRoleCol(role) {
+  for (var i = 0; i < state.columns.length; i++) {
+    if (colRole(state.columns[i]) === role) return i;
+  }
+  return -1;
+}
+function visibleRows() {
+  var f = state.filter;
+  if (f === 'all') return state.rows.slice();
+  var ci = findRoleCol('contact'), ri = findRoleCol('reply'), cols = state.columns;
+  return state.rows.filter(function (row) {
+    if (f === 'contacted' || f === 'not-contacted') {
+      if (ci < 0) return true;
+      var on = isOn(row.cells[cols[ci].id], CONTACT_STATES);
+      return f === 'contacted' ? on : !on;
+    }
+    if (ri < 0) return true;
+    var r = isOn(row.cells[cols[ri].id], REPLY_STATES);
+    return f === 'replied' ? r : !r;
+  });
+}
+function cellInner(col, value) {
+  var text = value == null ? '' : String(value);
+  var role = colRole(col);
+  if (role === 'contact' || role === 'reply') {
+    var states = role === 'contact' ? CONTACT_STATES : REPLY_STATES;
+    var on = isOn(text, states);
+    var st = on ? (role === 'contact' ? 'on' : 'reply-on') : 'off';
+    return '<div class="cell status-cell"><span class="status" data-state="' + st + '">' +
+      esc(text.trim() || states[0]) + '</span></div>';
+  }
+  if (!text) return '<div class="cell"></div>';
+  var trimmed = text.trim();
+  var body;
+  if (URL_RE.test(trimmed)) {
+    body = '<a class="link" href="' + esc(trimmed) + '" target="_blank" rel="noopener noreferrer">' + esc(text) + '</a>';
+  } else if (MAIL_RE.test(trimmed)) {
+    body = '<span class="mail">' + esc(text) + '</span>';
+  } else {
+    body = esc(text);
+  }
+  var clamped = (text.length > 64 || text.indexOf('\n') >= 0) ? ' is-clamped' : '';
+  return '<div class="cell' + clamped + '">' + body + '</div>';
+}
+function headerHTML() {
+  var ths = state.columns.map(function (col, c) {
+    var sel = ui.mode === 'col' && ui.col === c ? ' class="col-sel"' : '';
+    return '<th data-c="' + c + '"' + sel + '><div class="th">' +
+      '<span class="name" data-name="' + c + '">' + esc(col.name) + '</span></div>' +
+      '<span class="col-resize" data-resize="' + c + '"></span></th>';
+  }).join('');
+  return '<tr><th class="rn">#</th>' + ths + '</tr>';
+}
+function bodyHTML(enterId) {
+  var cols = state.columns, visible = ui.visible, total = cols.length + 1;
+  if (!state.rows.length) {
+    return '<tr><td colspan="' + total + '"><div class="empty">还没有记录，' +
+      '<button class="btn" data-act="addRow"><span class="plus">＋</span>新增行</button>' +
+      ' 开始记录研究室信息</div></td></tr>';
+  }
+  if (!visible.length) {
+    return '<tr><td colspan="' + total + '"><div class="empty">没有符合当前筛选条件的记录</div></td></tr>';
+  }
+  return visible.map(function (row, r) {
+    var abs = state.rows.indexOf(row) + 1;
+    var cls = enterId && enterId === row.id ? ' class="row-enter"' : '';
+    var tds = cols.map(function (col, c) {
+      return '<td data-c="' + c + '">' + cellInner(col, row.cells[col.id]) + '</td>';
+    }).join('');
+    return '<tr data-r="' + r + '"' + cls + '><td class="rn" data-r="' + r + '" data-rn="1">' + abs + '</td>' + tds + '</tr>';
+  }).join('');
+}
+function render(opts) {
+  opts = opts || {};
+  ui.visible = visibleRows();
+  clampSelection();
+  dom.cols.innerHTML = '<col class="rn">' + state.columns.map(function (c) {
+    return '<col style="width:' + Math.max(MIN_COL_W, parseInt(c.width, 10) || 160) + 'px">';
+  }).join('');
+  dom.thead.innerHTML = headerHTML();
+  dom.tbody.innerHTML = bodyHTML(opts.enterId);
+  if (opts.fade) dom.tbody.classList.add('rows-fade');
+  updateSubCount();
+  paintSelection();
+  updateFilterButtons();
+}
+function updateSubCount() {
+  var total = state.rows.length, shown = ui.visible.length;
+  if (!dom.count) return;
+  dom.count.textContent = !total ? '' : (shown === total ? '共 ' + total + ' 条' : shown + ' / ' + total + ' 条');
+}
+function paintSelection() {
+  var range = ui.mode === 'cell' ? selRange() : null;
+  var ths = dom.thead.querySelectorAll('th[data-c]');
+  for (var i = 0; i < ths.length; i++) {
+    var ci = parseInt(ths[i].dataset.c, 10);
+    ths[i].classList.toggle('col-sel', ui.mode === 'col' && ui.col === ci);
+  }
+  var trs = dom.tbody.rows;
+  for (var r = 0; r < trs.length; r++) {
+    var tr = trs[r];
+    var rowSel = ui.mode === 'row' && ui.row === r;
+    tr.classList.toggle('row-sel', rowSel);
+    var tds = tr.cells;
+    for (var k = 0; k < tds.length; k++) {
+      var td = tds[k];
+      if (td.dataset.rn) {
+        td.classList.toggle('is-active', rowSel);
+        continue;
+      }
+      var c = parseInt(td.dataset.c, 10);
+      var active = ui.mode === 'cell' && r === ui.focus.r && c === ui.focus.c;
+      var inRange = false;
+      if (ui.mode === 'col') {
+        inRange = ui.col === c;
+      } else if (range && (range.r1 !== range.r2 || range.c1 !== range.c2)) {
+        inRange = r >= range.r1 && r <= range.r2 && c >= range.c1 && c <= range.c2;
+      }
+      td.classList.toggle('is-active', active);
+      td.classList.toggle('in-range', inRange && !active);
+    }
+  }
+}
+function selRange() {
+  return {
+    r1: Math.min(ui.anchor.r, ui.focus.r), r2: Math.max(ui.anchor.r, ui.focus.r),
+    c1: Math.min(ui.anchor.c, ui.focus.c), c2: Math.max(ui.anchor.c, ui.focus.c)
+  };
+}
+function tdAt(r, c) {
+  var tr = dom.tbody.querySelector('tr[data-r="' + r + '"]');
+  if (!tr) return null;
+  return tr.querySelector('td[data-c="' + c + '"]');
+}
+function scrollToActive() {
+  var td = tdAt(ui.focus.r, ui.focus.c);
+  if (td) td.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+}
+/* ============================== Selection =============================== */
+function setFocus(r, c, opts) {
+  opts = opts || {};
+  var rows = ui.visible.length, cols = state.columns.length;
+  if (!rows || !cols) return;
+  r = Math.max(0, Math.min(rows - 1, r));
+  c = Math.max(0, Math.min(cols - 1, c));
+  if (opts.extend && ui.mode === 'cell') {
+    ui.focus = { r: r, c: c };
+  } else {
+    ui.mode = 'cell'; ui.row = -1; ui.col = -1;
+    ui.anchor = { r: r, c: c }; ui.focus = { r: r, c: c };
+  }
+  paintSelection();
+  scrollToActive();
+}
+function moveFocus(dr, dc, extend) {
+  setFocus(ui.focus.r + dr, ui.focus.c + dc, { extend: extend });
+}
+function moveFocusH(d) {
+  var rows = ui.visible.length, cols = state.columns.length;
+  if (!rows || !cols) return;
+  var r = ui.focus.r, c = ui.focus.c + d;
+  if (c >= cols) {
+    if (r < rows - 1) { r++; c = 0; }
+    else { addRow({ editFirst: true }); return; }
+  } else if (c < 0) {
+    if (r > 0) { r--; c = cols - 1; } else { c = 0; }
+  }
+  setFocus(r, c);
+}
+function selectRow(r) {
+  ui.mode = 'row'; ui.row = r; ui.col = -1;
+  ui.focus = { r: r, c: ui.focus.c };
+  ui.anchor = { r: r, c: ui.anchor.c };
+  paintSelection();
+}
+function selectCol(c) {
+  ui.mode = 'col'; ui.col = c; ui.row = -1;
+  ui.focus = { r: ui.focus.r, c: c };
+  ui.anchor = { r: ui.anchor.r, c: c };
+  paintSelection();
+}
+
+/* ============================= Cell editing ============================= */
+function setCellValue(rowId, colId, value) {
+  for (var i = 0; i < state.rows.length; i++) {
+    if (state.rows[i].id === rowId) { state.rows[i].cells[colId] = value; return; }
+  }
+}
+function setCellValueByRC(r, c, value) {
+  var row = ui.visible[r], col = state.columns[c];
+  if (row && col) setCellValue(row.id, col.id, value);
+}
+function autosize(ta) {
+  ta.style.height = 'auto';
+  var h = ta.scrollHeight;
+  ta.style.height = Math.min(MAX_EDITOR_H, h + 1) + 'px';
+  ta.style.overflowY = h > MAX_EDITOR_H ? 'auto' : 'hidden';
+}
+function refreshCell(td, row, col) {
+  if (!td || !row || !col) return;
+  td.classList.remove('editing');
+  td.innerHTML = cellInner(col, row.cells[col.id]);
+}
+function startEdit(r, c, opts) {
+  opts = opts || {};
+  if (ui.editing) commitEdit();
+  var row = ui.visible[r], col = state.columns[c];
+  if (!row || !col) return;
+  var td = tdAt(r, c);
+  if (!td) return;
+  var original = row.cells[col.id] == null ? '' : String(row.cells[col.id]);
+  var ta = document.createElement('textarea');
+  ta.className = 'cell-editor';
+  ta.spellcheck = false;
+  ta.value = opts.replace ? (opts.initial || '') : original;
+  td.classList.add('editing');
+  td.innerHTML = '';
+  td.appendChild(ta);
+  ui.editing = {
+    r: r, c: c, rowId: row.id, colId: col.id,
+    original: original, el: ta, pushed: false, historyIndex: -1
+  };
+  autosize(ta);
+  ta.focus();
+  ta.setSelectionRange(ta.value.length, ta.value.length);
+  ta.addEventListener('input', onEditorInput);
+  ta.addEventListener('keydown', onEditorKey);
+  ta.addEventListener('blur', function () { commitEdit(); });
+}
+function onEditorInput() {
+  var s = ui.editing;
+  if (!s) return;
+  if (!s.pushed && s.el.value !== s.original) {
+    pushHistory();
+    s.pushed = true;
+    s.historyIndex = undoStack.length - 1;
+  }
+  setCellValue(s.rowId, s.colId, s.el.value);
+  autosize(s.el);
+  scheduleSave();
+}
+function commitEdit() {
+  var s = ui.editing;
+  if (!s) return;
+  ui.editing = null;
+  refreshCell(tdAt(s.r, s.c), ui.visible[s.r], state.columns[s.c]);
+  paintSelection();
+}
+function cancelEdit() {
+  var s = ui.editing;
+  if (!s) return;
+  if (s.pushed && s.historyIndex === undoStack.length - 1) undoStack.pop();
+  setCellValue(s.rowId, s.colId, s.original);
+  ui.editing = null;
+  refreshCell(tdAt(s.r, s.c), ui.visible[s.r], state.columns[s.c]);
+  scheduleSave();
+  paintSelection();
+}
+function caretEdge(ta, which) {
+  if (ta.selectionStart !== ta.selectionEnd) return false;
+  return which === 'start' ? ta.selectionStart === 0 : ta.selectionEnd === ta.value.length;
+}
+function onFirstLine(ta) {
+  return ta.selectionStart === ta.selectionEnd && ta.value.lastIndexOf('\n', ta.selectionStart - 1) < 0;
+}
+function onLastLine(ta) {
+  return ta.selectionStart === ta.selectionEnd && ta.value.indexOf('\n', ta.selectionStart) < 0;
+}
+function onEditorKey(e) {
+  if (e.isComposing || e.keyCode === 229) return;
+  var ta = e.currentTarget;
+  if (e.key === 'Escape') { e.preventDefault(); cancelEdit(); return; }
+  if (e.key === 'Enter') {
+    if (e.altKey) {
+      e.preventDefault();
+      var pos = ta.selectionStart;
+      ta.value = ta.value.slice(0, pos) + '\n' + ta.value.slice(ta.selectionEnd);
+      ta.setSelectionRange(pos + 1, pos + 1);
+      ta.dispatchEvent(new Event('input'));
+      return;
+    }
+    e.preventDefault();
+    var dir = e.shiftKey ? -1 : 1;
+    commitEdit();
+    moveFocus(dir, 0);
+    return;
+  }
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    var d = e.shiftKey ? -1 : 1;
+    commitEdit();
+    moveFocusH(d);
+    return;
+  }
+  if (e.key === 'ArrowLeft' && caretEdge(ta, 'start')) { e.preventDefault(); commitEdit(); moveFocusH(-1); return; }
+  if (e.key === 'ArrowRight' && caretEdge(ta, 'end')) { e.preventDefault(); commitEdit(); moveFocusH(1); return; }
+  if (e.key === 'ArrowUp' && onFirstLine(ta)) { e.preventDefault(); commitEdit(); moveFocus(-1, 0); return; }
+  if (e.key === 'ArrowDown' && onLastLine(ta)) { e.preventDefault(); commitEdit(); moveFocus(1, 0); return; }
+}
+
+/* ========================== Row / Column ops ============================ */
+function addRowRaw() {
+  var row = { id: uid('r'), cells: {}, sample: false };
+  state.columns.forEach(function (c) { row.cells[c.id] = ''; });
+  state.rows.push(row);
+  return row;
+}
+function addColumnRaw() {
+  var col = { id: uid('c'), name: '列 ' + (state.columns.length + 1), width: 160 };
+  state.columns.push(col);
+  state.rows.forEach(function (r) { r.cells[col.id] = ''; });
+  return col;
+}
+function addRow(opts) {
+  opts = opts || {};
+  pushHistory();
+  var row = addRowRaw();
+  if (state.filter !== 'all') state.filter = 'all';
+  render({ enterId: row.id });
+  var idx = ui.visible.indexOf(row);
+  if (idx < 0) idx = 0;
+  setFocus(idx, opts.editFirst ? 0 : ui.focus.c);
+  scheduleSave();
+  if (opts.editFirst) startEdit(idx, 0);
+}
+function deleteRows(indices) {
+  var ids = [];
+  indices.forEach(function (i) {
+    var row = ui.visible[i];
+    if (row) ids.push(row.id);
+  });
+  if (!ids.length) return;
+  pushHistory();
+  var trs = Array.prototype.slice.call(dom.tbody.rows).filter(function (tr) {
+    var row = ui.visible[parseInt(tr.dataset.r, 10)];
+    return row && ids.indexOf(row.id) >= 0;
+  });
+  trs.forEach(function (tr) { tr.classList.add('row-leave'); });
+  var done = function () {
+    state.rows = state.rows.filter(function (r) { return ids.indexOf(r.id) < 0; });
+    ui.mode = 'cell'; ui.row = -1;
+    render();
+    scheduleSave();
+  };
+  if (trs.length) setTimeout(done, 150); else done();
+}
+function addColumn() {
+  pushHistory();
+  addColumnRaw();
+  render();
+  scheduleSave();
+  startHeaderRename(state.columns.length - 1);
+}
+function deleteColumn(c) {
+  if (state.columns.length <= 1) return;
+  pushHistory();
+  var col = state.columns[c];
+  state.columns.splice(c, 1);
+  state.rows.forEach(function (r) { delete r.cells[col.id]; });
+  ui.mode = 'cell'; ui.col = -1;
+  if (ui.focus.c >= state.columns.length) ui.focus.c = state.columns.length - 1;
+  if (ui.anchor.c >= state.columns.length) ui.anchor.c = state.columns.length - 1;
+  render();
+  scheduleSave();
+}
+function startHeaderRename(c) {
+  var th = dom.thead.querySelector('th[data-c="' + c + '"]');
+  var col = state.columns[c];
+  if (!th || !col) return;
+  var nameEl = th.querySelector('.name');
+  var input = document.createElement('input');
+  input.className = 'col-rename';
+  input.value = col.name;
+  input.setAttribute('aria-label', '列名');
+  th.classList.add('renaming');
+  nameEl.replaceWith(input);
+  input.focus();
+  input.select();
+  var finished = false;
+  var done = function (commit) {
+    if (finished) return;
+    finished = true;
+    var v = input.value.trim();
+    if (commit && v && v !== col.name) {
+      pushHistory();
+      col.name = v;
+      scheduleSave();
+    }
+    render();
+  };
+  input.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); done(true); }
+    else if (e.key === 'Escape') { e.preventDefault(); done(false); }
+    e.stopPropagation();
+  });
+  input.addEventListener('blur', function () { done(true); });
+  ['mousedown', 'click', 'dblclick'].forEach(function (t) {
+    input.addEventListener(t, function (e) { e.stopPropagation(); });
+  });
+}
+function toggleStatus(r, c) {
+  var row = ui.visible[r], col = state.columns[c];
+  if (!row || !col) return;
+  var role = colRole(col);
+  if (role !== 'contact' && role !== 'reply') return;
+  var states = role === 'contact' ? CONTACT_STATES : REPLY_STATES;
+  pushHistory();
+  setCellValue(row.id, col.id, isOn(row.cells[col.id], states) ? states[0] : states[1]);
+  render();
+  scheduleSave();
+}
+function clearRange() {
+  if (!ui.visible.length) return;
+  var range = selRange();
+  pushHistory();
+  for (var r = range.r1; r <= range.r2; r++) {
+    for (var c = range.c1; c <= range.c2; c++) setCellValueByRC(r, c, '');
+  }
+  render();
+  scheduleSave();
+}
+function deleteSelection() {
+  if (ui.mode === 'row') deleteRows([ui.row]);
+  else if (ui.mode === 'col' && ui.col >= 0) deleteColumn(ui.col);
+  else clearRange();
+}
+
+/* ================================ Filters =============================== */
+function buildFilters() {
+  dom.filters.innerHTML = FILTERS.map(function (f) {
+    return '<button type="button" data-filter="' + f.id + '">' + f.label + '</button>';
+  }).join('');
+}
+function updateFilterButtons() {
+  var btns = dom.filters.querySelectorAll('button[data-filter]');
+  for (var i = 0; i < btns.length; i++) {
+    var id = btns[i].dataset.filter;
+    var f = FILTERS.filter(function (x) { return x.id === id; })[0];
+    btns[i].disabled = !!(f && f.role && findRoleCol(f.role) < 0);
+    btns[i].setAttribute('aria-pressed', String(state.filter === id));
+  }
+}
+function setFilter(id) {
+  if (state.filter === id) return;
+  state.filter = id;
+  if (ui.editing) commitEdit();
+  ui.mode = 'cell'; ui.row = -1; ui.col = -1;
+  ui.anchor = { r: 0, c: 0 }; ui.focus = { r: 0, c: 0 };
+  ui.enterId = null;
+  render({ fade: true });
+  scheduleSave();
+}
+
+/* =============================== Clipboard ============================== */
+function plainCell(row, col) {
+  var v = row && col ? (row.cells[col.id] || '') : '';
+  return String(v).replace(/\r?\n/g, ' ');
+}
+function tsvForSelection() {
+  var lines = [];
+  if (ui.mode === 'row') {
+    var row = ui.visible[ui.row];
+    if (!row) return '';
+    lines.push(state.columns.map(function (col) { return plainCell(row, col); }).join('\t'));
+  } else if (ui.mode === 'col') {
+    if (ui.col < 0) return '';
+    ui.visible.forEach(function (row) { lines.push(plainCell(row, state.columns[ui.col])); });
+  } else {
+    var range = selRange();
+    for (var r = range.r1; r <= range.r2; r++) {
+      var rw = ui.visible[r];
+      if (!rw) continue;
+      var cells = [];
+      for (var c = range.c1; c <= range.c2; c++) cells.push(plainCell(rw, state.columns[c]));
+      lines.push(cells.join('\t'));
+    }
+  }
+  return lines.join('\n');
+}
+function parseMatrix(text) {
+  var t = String(text).replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  if (t.charAt(t.length - 1) === '\n') t = t.slice(0, -1);
+  if (t.indexOf('\t') >= 0) {
+    return t.split('\n').map(function (l) { return l.split('\t'); });
+  }
+  if (t.indexOf(',') >= 0) return parseCSV(t);
+  return t.split('\n').map(function (l) { return [l]; });
+}
+function parseCSV(text) {
+  var rows = [], row = [], field = '', i = 0, inQ = false;
+  while (i < text.length) {
+    var ch = text.charAt(i);
+    if (inQ) {
+      if (ch === '"') {
+        if (text.charAt(i + 1) === '"') { field += '"'; i += 2; continue; }
+        inQ = false; i++; continue;
+      }
+      field += ch; i++; continue;
+    }
+    if (ch === '"') { inQ = true; i++; continue; }
+    if (ch === ',') { row.push(field); field = ''; i++; continue; }
+    if (ch === '\n') { row.push(field); rows.push(row); row = []; field = ''; i++; continue; }
+    field += ch; i++;
+  }
+  row.push(field);
+  if (row.length > 1 || row[0] !== '') rows.push(row);
+  return rows;
+}
+function applyMatrix(r0, c0, matrix) {
+  pushHistory();
+  var cols = state.columns.length, vis = ui.visible.length;
+  var addCols = Math.max(0, c0 + matrix[0].length - cols);
+  var addRows = Math.max(0, r0 + matrix.length - vis);
+  if (addRows) state.filter = 'all';
+  for (var i = 0; i < addCols; i++) addColumnRaw();
+  for (var j = 0; j < addRows; j++) addRowRaw();
+  if (addCols || addRows) ui.visible = visibleRows();
+  matrix.forEach(function (line, i2) {
+    line.forEach(function (val, j2) { setCellValueByRC(r0 + i2, c0 + j2, val); });
+  });
+  render();
+  ui.mode = 'cell';
+  ui.anchor = { r: r0, c: c0 };
+  ui.focus = { r: Math.min(ui.visible.length - 1, r0 + matrix.length - 1), c: Math.min(state.columns.length - 1, c0 + matrix[0].length - 1) };
+  paintSelection();
+  scrollToActive();
+  scheduleSave();
+}
+function onPaste(e) {
+  if (ui.editing) return;
+  var text = e.clipboardData && e.clipboardData.getData('text/plain');
+  if (!text) return;
+  e.preventDefault();
+  var matrix = parseMatrix(text);
+  if (!matrix.length) return;
+  var range = ui.mode === 'cell' ? selRange() : null;
+  if (range && (range.r2 > range.r1 || range.c2 > range.c1) &&
+      matrix.length === 1 && matrix[0].length === 1) {
+    pushHistory();
+    for (var r = range.r1; r <= range.r2; r++) {
+      for (var c = range.c1; c <= range.c2; c++) setCellValueByRC(r, c, matrix[0][0]);
+    }
+    render();
+    scheduleSave();
+    return;
+  }
+  var r0 = range ? range.r1 : ui.focus.r;
+  var c0 = range ? range.c1 : ui.focus.c;
+  applyMatrix(r0, c0, matrix);
+}
+function onCopy(e) {
+  if (ui.editing) return;
+  var tsv = tsvForSelection();
+  if (!tsv) return;
+  e.preventDefault();
+  e.clipboardData.setData('text/plain', tsv);
+}
+function onCut(e) {
+  if (ui.editing) return;
+  var tsv = tsvForSelection();
+  if (!tsv) return;
+  e.preventDefault();
+  e.clipboardData.setData('text/plain', tsv);
+  deleteSelection();
+}
+/* ============================== Shortcuts =============================== */
+function isPrintable(e) {
+  return e.key.length === 1 && e.key >= ' ' && !e.metaKey && !e.ctrlKey && !e.altKey;
+}
+function onGlobalKey(e) {
+  if (ui.editing || ui.resizing) return;
+  if (e.target && /^(INPUT|TEXTAREA)$/.test(e.target.tagName)) return;
+  var meta = modKey(e);
+  if (meta && (e.key === 'z' || e.key === 'Z')) {
+    e.preventDefault();
+    if (e.shiftKey) redo(); else undo();
+    return;
+  }
+  if (meta && (e.key === 'y' || e.key === 'Y')) { e.preventDefault(); redo(); return; }
+  if (meta) return;                       /* 复制 / 粘贴 / 全选交给浏览器 */
+  if (e.key === 'Escape') {
+    if (dom.menu.dataset.open === 'true') { closeMenu(); return; }
+    ui.mode = 'cell'; ui.row = -1; ui.col = -1;
+    paintSelection();
+    return;
+  }
+  if (ui.mode === 'cell') {
+    if (!ui.visible.length) return;
+    switch (e.key) {
+      case 'ArrowUp':    e.preventDefault(); moveFocus(-1, 0, e.shiftKey); return;
+      case 'ArrowDown':  e.preventDefault(); moveFocus(1, 0, e.shiftKey); return;
+      case 'ArrowLeft':  e.preventDefault(); moveFocus(0, -1, e.shiftKey); return;
+      case 'ArrowRight': e.preventDefault(); moveFocus(0, 1, e.shiftKey); return;
+      case 'Tab':        e.preventDefault(); moveFocusH(e.shiftKey ? -1 : 1); return;
+      case 'Enter': case 'F2':
+        e.preventDefault(); startEdit(ui.focus.r, ui.focus.c); return;
+      case 'Backspace': case 'Delete':
+        e.preventDefault(); clearRange(); return;
+    }
+    if (isPrintable(e)) {
+      e.preventDefault();
+      startEdit(ui.focus.r, ui.focus.c, { replace: true, initial: e.key });
+    }
+    return;
+  }
+  if (e.key === 'Backspace' || e.key === 'Delete') { e.preventDefault(); deleteSelection(); return; }
+  if (e.key === 'Enter' || e.key === 'F2') {
+    if (ui.mode === 'row') { e.preventDefault(); startEdit(ui.row, 0); }
+    else if (ui.mode === 'col') { e.preventDefault(); startEdit(0, ui.col); }
+  }
+}
+
+/* ================================= Menu ================================= */
+function menuItemHTML(act, label, key, disabled) {
+  return '<button type="button" role="menuitem" data-act="' + act + '"' +
+    (disabled ? ' disabled' : '') + '><span>' + label + '</span>' +
+    (key ? '<span class="key">' + key + '</span>' : '') + '</button>';
+}
+function activeColIndex() { return ui.mode === 'col' && ui.col >= 0 ? ui.col : ui.focus.c; }
+function openMenu() {
+  var c = activeColIndex();
+  var col = state.columns[c];
+  var name = esc(col ? col.name : '');
+  var rowIdx = ui.mode === 'row' ? ui.row : -1;
+  var rowLabel = '';
+  if (rowIdx >= 0 && ui.visible[rowIdx]) {
+    rowLabel = '（第 ' + (state.rows.indexOf(ui.visible[rowIdx]) + 1) + ' 行）';
+  }
+  var html = '';
+  html += menuItemHTML('add-col', '新增列');
+  html += menuItemHTML('rename-col', '重命名列：' + name);
+  html += menuItemHTML('del-col', '删除列：' + name, '', state.columns.length <= 1);
+  html += '<hr>';
+  html += menuItemHTML('del-row', '删除行' + rowLabel, '', rowIdx < 0);
+  html += '<hr>';
+  html += menuItemHTML('export-csv', '导出 CSV');
+  html += menuItemHTML('save-html', '保存为 HTML');
+  if (state.rows.some(function (r) { return r.sample; })) {
+    html += '<hr>' + menuItemHTML('clear-sample', '清空示例数据');
+  }
+  dom.menu.innerHTML = html;
+  var rect = dom.more.getBoundingClientRect();
+  dom.menu.style.top = (rect.bottom + 6) + 'px';
+  dom.menu.style.right = Math.max(8, window.innerWidth - rect.right) + 'px';
+  dom.menu.style.left = 'auto';
+  dom.menu.dataset.open = 'true';
+  dom.more.setAttribute('aria-expanded', 'true');
+  /* 兜底：动画被节流/冻结时，锁定在最终可见状态，菜单不会停在 opacity:0 */
+  clearTimeout(menuAnimTimer);
+  menuAnimTimer = setTimeout(function () {
+    if (dom.menu.dataset.open === 'true') dom.menu.style.animation = 'none';
+  }, MENU_ANIM_MS + 60);
+}
+function closeMenu() {
+  dom.menu.dataset.open = 'false';
+  dom.menu.style.animation = '';
+  clearTimeout(menuAnimTimer);
+  dom.more.setAttribute('aria-expanded', 'false');
+}
+function toggleMenu() {
+  if (dom.menu.dataset.open === 'true') closeMenu(); else openMenu();
+}
+function onMenuClick(e) {
+  var btn = e.target.closest('button[data-act]');
+  if (!btn || btn.disabled) return;
+  var act = btn.dataset.act;
+  var c = activeColIndex();
+  closeMenu();
+  if (act === 'add-col') addColumn();
+  else if (act === 'rename-col') startHeaderRename(c);
+  else if (act === 'del-col') deleteColumn(c);
+  else if (act === 'del-row') deleteSelection();
+  else if (act === 'export-csv') exportCSV();
+  else if (act === 'save-html') saveAsHTML();
+  else if (act === 'clear-sample') clearSamples();
+}
+function clearSamples() {
+  if (!state.rows.some(function (r) { return r.sample; })) return;
+  pushHistory();
+  state.rows = state.rows.filter(function (r) { return !r.sample; });
+  render();
+  scheduleSave();
+}
+
+/* ================================ Export ================================ */
+function csvField(v) {
+  var s = String(v == null ? '' : v);
+  return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+function exportCSV() {
+  var cols = state.columns;
+  var lines = [cols.map(function (c) { return csvField(c.name); }).join(',')];
+  state.rows.forEach(function (row) {
+    lines.push(cols.map(function (c) { return csvField(row.cells[c.id]); }).join(','));
+  });
+  download('\uFEFF' + lines.join('\r\n'), '研究室记录表_' + stamp() + '.csv', 'text/csv;charset=utf-8');
+}
+function stripEmbedded(html) {
+  /* 动态构造，避免正则字面量匹配到自身源码 */
+  var re = new RegExp('<script id="' + EMBED_ID + '"[\\s\\S]*?<\\/script>\\s*', 'g');
+  return html.replace(re, '');
+}
+function saveAsHTML() {
+  var payload = JSON.stringify({
+    version: 2, id: 'backup-' + uid(''), columns: state.columns, rows: state.rows,
+    filter: state.filter, savedAt: Date.now()
+  }).replace(/</g, '\\u003c');
+  var tag = '<script id="' + EMBED_ID + '" type="application/json">' + payload + '<\/script>';
+  var html = stripEmbedded(PRISTINE_HTML);
+  if (html.indexOf(EMBED_MARKER) >= 0) {
+    html = html.replace(EMBED_MARKER, tag + '\n' + EMBED_MARKER);
+  } else {
+    /* 兜底：插到文档真正的末尾（不能用第一个匹配，源码里也有该字符串） */
+    var at = html.lastIndexOf('</body>');
+    if (at < 0) at = html.lastIndexOf('</html>');
+    html = at < 0 ? html + tag : html.slice(0, at) + tag + '\n' + html.slice(at);
+  }
+  download(html, '研究室记录表_' + stamp() + '.html', 'text/html;charset=utf-8');
+}
+
+/* ================================ Events ================================ */
+function onGridMouseDown(e) {
+  var td = e.target.closest('td');
+  if (!td) return;
+  if (e.target.closest('.cell-editor')) return;      /* 正在编辑，交给输入框 */
+  var tr = td.parentElement;
+  var r = parseInt(tr.dataset.r, 10);
+  if (isNaN(r)) return;
+  if (td.dataset.rn) {
+    if (ui.editing) commitEdit();
+    selectRow(r);
+    return;
+  }
+  if (e.button !== 0 || e.target.closest('a.link')) return;
+  e.preventDefault();
+  if (ui.editing) commitEdit();
+  var c = parseInt(td.dataset.c, 10);
+  if (e.shiftKey && ui.mode === 'cell') {
+    ui.focus = { r: r, c: c };
+    paintSelection();
+    scrollToActive();
+    return;
+  }
+  setFocus(r, c);
+  var col = state.columns[c];
+  var role = col ? colRole(col) : 'plain';
+  if (role === 'contact' || role === 'reply') { toggleStatus(r, c); return; }
+  ui.drag = { r: r, c: c, x: e.clientX, y: e.clientY, moved: false };
+}
+function onDocMouseMove(e) {
+  var d = ui.drag;
+  if (!d) return;
+  if (!d.moved && (Math.abs(e.clientX - d.x) > 4 || Math.abs(e.clientY - d.y) > 4)) d.moved = true;
+  if (!d.moved) return;
+  var el = document.elementFromPoint(e.clientX, e.clientY);
+  var cell = el && el.closest ? el.closest('td[data-c]') : null;
+  if (!cell) return;
+  var r = parseInt(cell.parentElement.dataset.r, 10);
+  var c = parseInt(cell.dataset.c, 10);
+  if (isNaN(r) || isNaN(c) || (r === ui.focus.r && c === ui.focus.c)) return;
+  ui.focus = { r: r, c: c };
+  paintSelection();
+}
+function onDocMouseUp() {
+  var d = ui.drag;
+  ui.drag = null;
+  if (!d || d.moved) return;
+  startEdit(d.r, d.c);
+}
+function onHeadMouseDown(e) {
+  var handle = e.target.closest('.col-resize');
+  if (handle) {
+    e.preventDefault();
+    startResize(parseInt(handle.dataset.resize, 10), handle, e);
+    return;
+  }
+  var th = e.target.closest('th[data-c]');
+  if (!th) return;
+  if (ui.editing) commitEdit();
+  selectCol(parseInt(th.dataset.c, 10));
+}
+function onHeadDblClick(e) {
+  var th = e.target.closest('th[data-c]');
+  if (!th || e.target.closest('.col-resize')) return;
+  startHeaderRename(parseInt(th.dataset.c, 10));
+}
+function startResize(c, handle, e) {
+  var col = state.columns[c];
+  if (!col) return;
+  ui.resizing = { c: c, startX: e.clientX, startW: col.width, handle: handle };
+  handle.classList.add('is-dragging');
+  document.body.classList.add('is-resizing');
+}
+function onResizeMove(e) {
+  var s = ui.resizing;
+  if (!s) return;
+  var w = Math.max(MIN_COL_W, Math.round(s.startW + (e.clientX - s.startX)));
+  state.columns[s.c].width = w;
+  var colEls = dom.cols.querySelectorAll('col');
+  if (colEls[s.c + 1]) colEls[s.c + 1].style.width = w + 'px';
+}
+function endResize() {
+  var s = ui.resizing;
+  if (!s) return;
+  ui.resizing = null;
+  s.handle.classList.remove('is-dragging');
+  document.body.classList.remove('is-resizing');
+  scheduleSave();
+}
+function bindEvents() {
+  dom.addRow.addEventListener('click', function () { addRow({}); });
+  dom.more.addEventListener('click', function (e) { e.stopPropagation(); toggleMenu(); });
+  dom.menu.addEventListener('click', onMenuClick);
+  dom.filters.addEventListener('click', function (e) {
+    var btn = e.target.closest('button[data-filter]');
+    if (btn && !btn.disabled) setFilter(btn.dataset.filter);
+  });
+  dom.tbody.addEventListener('mousedown', onGridMouseDown);
+  dom.tbody.addEventListener('click', function (e) {
+    if (e.target.closest('[data-act="addRow"]')) addRow({});
+  });
+  dom.tbody.addEventListener('dblclick', function (e) {
+    var cell = e.target.closest('td[data-c]');
+    if (!cell || e.target.closest('a.link') || e.target.closest('.cell-editor')) return;
+    startEdit(parseInt(cell.parentElement.dataset.r, 10), parseInt(cell.dataset.c, 10));
+  });
+  dom.thead.addEventListener('mousedown', onHeadMouseDown);
+  dom.thead.addEventListener('dblclick', onHeadDblClick);
+  document.addEventListener('mousemove', function (e) { onResizeMove(e); onDocMouseMove(e); });
+  document.addEventListener('mouseup', function () { endResize(); onDocMouseUp(); });
+  document.addEventListener('mousedown', function (e) {
+    if (dom.menu.dataset.open === 'true' &&
+        !dom.menu.contains(e.target) && !dom.more.contains(e.target)) closeMenu();
+  });
+  document.addEventListener('keydown', onGlobalKey);
+  document.addEventListener('copy', onCopy);
+  document.addEventListener('cut', onCut);
+  document.addEventListener('paste', onPaste);
+  window.addEventListener('scroll', function () {
+    if (dom.menu.dataset.open === 'true') closeMenu();
+  }, true);
+  window.addEventListener('resize', function () {
+    if (dom.menu.dataset.open === 'true') closeMenu();
+  });
+  window.addEventListener('beforeunload', function () {
+    if (dirty) { clearTimeout(saveTimer); saveNow(); }
+  });
+}
+
+/* ================================= Init ================================= */
+function normalizeRows(rows) {
+  return rows.map(function (r) {
+    var row = { id: r.id || uid('r'), cells: {}, sample: !!r.sample };
+    state.columns.forEach(function (c) {
+      row.cells[c.id] = r.cells && r.cells[c.id] != null ? r.cells[c.id] : '';
+    });
+    return row;
+  });
+}
+function init() {
+  var embedded = readEmbedded();
+  var stored = null;
+  if (embedded && embedded.id) state.id = embedded.id;
+  stored = loadStored();
+  var data = stored || embedded;
+  if (data && Array.isArray(data.columns) && data.columns.length && Array.isArray(data.rows)) {
+    state.columns = data.columns.map(function (c) {
+      return {
+        id: c.id || uid('c'),
+        name: c.name || '列',
+        width: parseInt(c.width, 10) || 160
+      };
+    });
+    state.rows = normalizeRows(data.rows);
+    state.filter = FILTERS.some(function (f) { return f.id === data.filter; }) ? data.filter : 'all';
+    if (!stored) scheduleSave();
+  } else {
+    state.columns = DEFAULT_COLUMNS.map(function (c) {
+      return { id: uid('c'), name: c.name, width: c.width };
+    });
+    state.rows = SAMPLE_DATA.map(function (src) {
+      var row = { id: uid('r'), cells: {}, sample: true };
+      state.columns.forEach(function (c) { row.cells[c.id] = src[c.name] || ''; });
+      return row;
+    });
+    scheduleSave();
+  }
+  buildFilters();
+  render();
+  paintSelection();
+  setSaveState(stored ? 'saved' : 'saving');
+}
+bindEvents();
+init();
+</script>
+</body>
+</html>
