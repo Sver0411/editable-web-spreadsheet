@@ -1,38 +1,15 @@
-# 研究室记录表
+# Online Excel
 
-一个轻量、本地优先、类似 Excel 的大学院研究室信息记录网页。仓库只包含一个 `index.html`（HTML / CSS / JS 全内联，零依赖、零构建、无后端），双击即可使用。
+A lightweight, Excel-style spreadsheet that runs in your browser. Everything is contained in a single HTML file—no installation, account, backend, or internet connection required.
 
-## 打开
+## Getting started
 
-下载 [`index.html`](index.html)，双击用浏览器打开即可（`file://` 下也能正常读写本地存储）。
+Download [index.html](index.html) and double-click it to open in a modern browser. Edit cells directly, add or remove rows and columns, resize columns, and copy or paste spreadsheet data.
 
-## 功能
+## Saving your data
 
-- **默认列**：学校 / 研究室名称 / 研究室网址 / 教授名称 / 研究内容 / 是否联系教授 / 是否回复 / 联系日期 / 备注；首次打开带 2 行浅色示例数据，可在「···」中一键清空
-- **表格操作**：新增行、新增列、删除行、删除列、双击列名重命名；拖动列标题右边缘调整列宽（列宽会保存）
-- **单元格编辑**：单击即进入编辑；支持中文、英文、数字、网址、多行文字；长内容默认折叠到约 3 行，编辑时完整展开
-- **键盘**：`↑ ↓ ← →` 移动、`Tab` 右移、`Shift+Tab` 左移、`Enter` 下一行、`Shift+Enter` 上一行、`Alt+Enter` 在单元格内换行；编辑文字时方向键优先移动光标，光标到边界才切换单元格
-- **撤销 / 重做**：`Command/Ctrl + Z` 撤销，`Command/Ctrl + Shift + Z` 或 `Ctrl + Y` 重做，保留最近 60 步（编辑、增删行列、重命名、改状态、改字号颜色、粘贴都可撤销）
-- **复制 / 粘贴**：`Command/Ctrl + C / V`，可直接从 Excel、Numbers、Google Sheets 粘贴多行多列，自动识别制表符 / CSV / 单列，必要时自动补行补列
-- **筛选**：全部 / 已联系 / 未联系 / 已回复 / 未回复，只显示符合条件的行
-- **右键菜单**：在单元格上右键弹出快捷菜单，把最常用的动作都放在手边
-  - 单元格：编辑单元格、复制、粘贴、清空内容、打开链接（网址单元格）
-  - 状态：直接点「已联系 / 未联系」「已回复 / 未回复」切换（框选多格或右键行号可批量设置整行）
-  - 字号：`A−` / `A＋` 逐档调整（11–24）
-  - 颜色：9 种低饱和文字颜色 + 「默认」恢复
-  - 行列：在上方/下方插入行、在左侧/右侧插入列、删除行、删除列、重命名列
-  - 清除格式：一键把选中区域的字号与颜色恢复默认
-  - 在行号上右键只给行操作，在列标题上右键只给列操作（插入 / 重命名 / 删除 / 导出）
-- **文字格式**：字号与颜色按单元格保存，可框选多格、整行或整列批量设置；与列宽一样会自动保存
-- **状态与来源**：「是否联系教授」「是否回复」为低饱和状态胶囊，点击即切换；HTTP / HTTPS 网址显示为可点击链接（新标签页打开，单元格仍可编辑），邮箱地址做轻微样式
-- **查看**：滚动时顶部列名与左侧行号固定；点击行号选中整行、点击列标题选中整列
-- **自动保存**：编辑后自动写入浏览器本地存储，顶部低调显示「保存中… / 已保存」
+Changes are saved automatically in the current browser's local storage. **Editing does not modify the original HTML file.** Data stays on your device.
 
-## 保存与备份
+Use the menu to export CSV for use in other spreadsheet apps. Use Save HTML to download a standalone backup containing your data that you can reopen and continue editing. Save a backup before moving the file, switching devices, or clearing browser data.
 
-编辑内容自动保存在**当前浏览器**的本地存储中，不会修改 `index.html` 本身。要迁移或备份，用「···」菜单：
-
-- **导出 CSV**：UTF-8 BOM，Excel / Numbers / Google Sheets 可直接打开；CSV 不包含列宽与文字格式
-- **保存为 HTML**：生成一个包含当前全部数据的新 HTML 文件，双击后仍可继续编辑，相当于一份可携带的表格备份（备份使用独立的数据标识，不会影响原文件的本地数据），字号 / 颜色等格式一并保留
-
-数据默认全部留在本机，不联网、不上传。
+This is an independent project for everyday spreadsheet editing, with no external runtime dependencies. It is not affiliated with Microsoft and does not provide full Excel compatibility.
